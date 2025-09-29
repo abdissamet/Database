@@ -1,0 +1,177 @@
+PART A
+
+CREATE DATABASE advanced_lab;
+
+CREATE TABLE employees (
+    emp_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    department VARCHAR(50),
+    salary INTEGER,
+    hire_date DATE,
+    status VARCHAR(20) DEFAULT 'Active'
+);
+
+CREATE TABLE departments (
+    dept_id SERIAL PRIMARY KEY,
+    dept_name VARCHAR(50) NOT NULL,
+    budget INTEGER,
+    manager_id INTEGER
+);
+
+CREATE TABLE projects (
+    project_id SERIAL PRIMARY KEY,
+    project_name VARCHAR(100) NOT NULL,
+    dept_id INTEGER,
+    start_date DATE,
+    end_date DATE,
+    budget INTEGER
+);
+
+PART B
+
+INSERT INTO employees (first_name, last_name, department)
+VALUES ('John', 'Doe', 'IT');
+
+INSERT INTO employees (first_name, last_name, department, hire_date, salary, status)
+VALUES ('Jane', 'Smith', 'HR', '2023-01-15', DEFAULT, DEFAULT);
+
+INSERT INTO departments (dept_name, budget) 
+VALUES 
+    ('IT', 100000),
+    ('HR', 80000),
+    ('Sales', 120000);
+
+INSERT INTO employees (first_name, last_name, department, salary, hire_date)
+VALUES ('Bob', 'Johnson', 'Finance', 50000 * 1.1, CURRENT_DATE);
+
+CREATE TEMPORARY TABLE temp_employees AS 
+SELECT * FROM employees WHERE department = 'IT';
+
+PART C
+
+UPDATE employees 
+SET salary = salary * 1.10;
+
+UPDATE employees 
+SET status = 'Senior' 
+WHERE salary > 60000 AND hire_date < '2020-01-01';
+
+UPDATE employees 
+SET department = 
+    CASE 
+        WHEN salary > 80000 THEN 'Management'
+        WHEN salary BETWEEN 50000 AND 80000 THEN 'Senior'
+        ELSE 'Junior'
+    END;
+
+UPDATE employees 
+SET department = DEFAULT 
+WHERE status = 'Inactive';
+
+UPDATE departments d
+SET budget = (
+    SELECT AVG(salary) * 1.20 
+    FROM employees e 
+    WHERE e.department = d.dept_name
+)
+WHERE dept_id IN (SELECT dept_id FROM departments);
+
+UPDATE employees 
+SET salary = salary * 1.15, 
+    status = 'Promoted' 
+WHERE department = 'Sales';
+
+PART D
+
+DELETE FROM employees 
+WHERE status = 'Terminated';
+
+DELETE FROM employees 
+WHERE salary < 40000 
+    AND hire_date > '2023-01-01' 
+    AND department IS NULL;
+
+DELETE FROM departments 
+WHERE dept_id NOT IN (
+    SELECT DISTINCT dept_id 
+    FROM departments d 
+    JOIN employees e ON d.dept_name = e.department 
+    WHERE e.department IS NOT NULL
+);
+
+DELETE FROM projects 
+WHERE end_date < '2023-01-01' 
+RETURNING *;
+
+PART E
+
+INSERT INTO employees (first_name, last_name, salary, department)
+VALUES ('Alice', 'Brown', NULL, NULL);
+
+UPDATE employees 
+SET department = 'Unassigned' 
+WHERE department IS NULL;
+
+DELETE FROM employees 
+WHERE salary IS NULL OR department IS NULL;
+
+PART G
+
+INSERT INTO employees (first_name, last_name, department, salary)
+SELECT 'David', 'Lee', 'IT', 65000
+WHERE NOT EXISTS (
+    SELECT 1 FROM employees 
+    WHERE first_name = 'David' AND last_name = 'Lee'
+);
+
+UPDATE employees 
+SET salary = 
+    CASE 
+        WHEN department IN (
+            SELECT dept_name FROM departments WHERE budget > 100000
+        ) THEN salary * 1.10
+        ELSE salary * 1.05
+    END;
+
+INSERT INTO employees (first_name, last_name, department, salary) VALUES
+    ('Emma', 'Davis', 'IT', 60000),
+    ('Frank', 'Miller', 'HR', 55000),
+    ('Grace', 'Wilson', 'Sales', 70000),
+    ('Henry', 'Taylor', 'IT', 65000),
+    ('Ivy', 'Anderson', 'Finance', 80000);
+
+UPDATE employees 
+SET salary = salary * 1.10 
+WHERE first_name IN ('Emma', 'Frank', 'Grace', 'Henry', 'Ivy');
+
+CREATE TABLE employee_archive AS TABLE employees WITH NO DATA;
+
+INSERT INTO employee_archive 
+SELECT * FROM employees WHERE status = 'Inactive';
+
+DELETE FROM employees 
+WHERE status = 'Inactive';
+
+UPDATE projects 
+SET end_date = end_date + INTERVAL '30 days'
+WHERE budget > 50000 
+    AND dept_id IN (
+        SELECT d.dept_id 
+        FROM departments d 
+        JOIN employees e ON d.dept_name = e.department 
+        GROUP BY d.dept_id 
+        HAVING COUNT(e.emp_id) > 3
+    );
+
+SELECT 'Employees:' as "Table Info";
+SELECT * FROM employees LIMIT 5;
+
+SELECT 'Departments:' as "Table Info";
+SELECT * FROM departments LIMIT 5;
+
+SELECT 'Projects:' as "Table Info";
+SELECT * FROM projects LIMIT 5;
+
+SELECT 'Employee Archive:' as "Table Info";
+SELECT * FROM employee_archive LIMIT 5;
